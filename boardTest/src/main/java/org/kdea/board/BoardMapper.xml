@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.kdea.board.BoardDAO"> <!--이 sql 문장과 매핑될 인터페이스의 완전한 경로 -->
+
+	<select id="list" resultType="org.kdea.board.BoardVO" parameterType="org.kdea.board.SearchPageVO">
+	WITH t1(boardNum,boardId,boardTitle,boardContent,boardHiredate,active,COMMENTNUM,lvl,totalRows)AS
+	(
+	  SELECT boardNum,boardId,boardTitle,boardContent,boardHiredate,active,COMMENTNUM, 0 AS lvl, (SELECT COUNT(*) FROM boardHtml
+	  ) totalRows 
+	  FROM boardHtml
+	  WHERE COMMENTNUM is null
+	  UNION ALL 
+	  SELECT e.boardNum,e.boardId,e.boardTitle,e.boardContent,e.boardHiredate,t1.active,e.COMMENTNUM, t1.lvl+1 AS lvl, t1.totalRows 
+	  FROM (select * from boardhtml) e 
+	  JOIN t1 ON e.COMMENTNUM = t1.boardNum
+	)
+	  SEARCH DEPTH FIRST BY boardNum SET ordering 
+	  SELECT * FROM
+	(
+	  SELECT boardNum,boardId,LPAD('┗', lvl*3, '　')||boardTitle AS
+	  boardTitle,boardContent,boardHiredate,active,COMMENTNUM, totalRows, TRUNC((ordering-1)/10)+1 AS page 
+	  FROM t1
+	  ORDER BY ordering
+	)
+	  WHERE page=#{pageNum}
+	</select>
+
+	<select id="detail" resultType="org.kdea.board.BoardVO">
+		select *
+		from boardHtml e inner join userinfo d
+		on e.BOARDID=d.ID
+		where boardnum=#{boardNum} and e.boardid=#{boardid}
+	</select>
+	<!--delete -->
+	<update id="delete">
+	UPDATE boardHtml SET active=1 where boardNum = #{boardnum} and not EXISTS (SELECT * FROM (select * from boardHtml where active =0) WHERE commentNum=#{boardnum})
+	</update>
+
+	<!--update -->
+	<update id="update" parameterType="org.kdea.board.BoardVO"> 
+	UPDATE boardHtml SET boardTitle = #{boardtitle}, boardContent = #{boardcontent} where boardNum 
+		= #{boardNum} 
+	</update>
+	<!--insert -->
+	<insert id="writing" parameterType="org.kdea.board.BoardVO">
+	INSERT into boardHtml (boardNum,boardId,boardTitle,boardContent,boardHiredate,active)
+		VALUES (SEQUENCE1.NEXTVAL,#{boardid},#{boardtitle},#{boardcontent},sysdate,0) 
+	</insert>
+	<!--last boardNum-->
+	<select id="writingbefore" resultType="org.kdea.board.BoardVO">
+		select max(BOARDNUM) boardNum from boardHtml
+	</select>
+	<!--comment-->
+	<insert id="comment" parameterType="org.kdea.board.BoardVO">
+	INSERT into boardHtml (boardNum,boardId,boardTitle,boardContent,boardHiredate,commentNum,active) 
+	VALUES (SEQUENCE1.NEXTVAL,#{boardid},#{boardtitle},#{boardcontent},sysdate,#{commentNum},0)
+	</insert>
+	<!--search-->
+	<select id="search" resultType="org.kdea.board.BoardVO" parameterType="org.kdea.board.SearchPageVO">
+
+		with t1 as
+		(
+		  select rownum rn, boardNum,boardId,boardTitle,boardContent,boardHiredate,active,COMMENTNUM
+		  from boardHtml 
+		   <where>
+				    <if test="dropBox == 'boardTitle'">
+				             boardTitle like '%'||#{searchText}||'%'
+				    </if>
+				    <if test="dropBox == 'boardNum'">
+				             AND boardNum like '%'||#{searchText}||'%'
+				    </if>
+				    <if test="dropBox == 'boardId'">
+				             AND boardId like '%'||#{searchText}||'%'
+				    </if>
+		  </where>
+		)
+		select * from
+		(
+		SELECT rn, boardNum,boardId,boardTitle,boardContent,boardHiredate,active,COMMENTNUM, TRUNC((rn-1)/5)+1 AS page, (select count(*) from t1) as totalrows
+		  FROM t1
+		) 
+		where page = #{pageNum}
+	</select>
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.kdea.uploadMyBatis.PdsDAO2"> <!--이 sql 문장과 매핑될 인터페이스의 완전한 경로-->
+    
+
+<!--      <insert id="insert" parameterType="org.kdea.uploadMyBatis.PdsVO2">
+        insert into emp2 (empno, ename, deptno, job, sal) 
+        	values ( #{empno}, #{ename}, #{deptno}, #{job}, #{sal} )
+     </insert> -->
+    <insert id="upload" parameterType="org.kdea.uploadMyBatis.PdsVO2">
+    	INSERT INTO psd (upNum,author, regdate, comments,filename,subFilename,filesize,ext) 
+    	VALUES (#{upNum},'admin',sysdate,'comm',#{filename},#{subFilename},#{filesize},#{ext})
+    </insert>
+    <select id="info" resultType="org.kdea.uploadMyBatis.PdsVO2">
+        select * from psd where upNum=#{upNum}
+    </select>
+  	<select id="download" resultType="org.kdea.uploadMyBatis.PdsVO2">
+        select filename from psd where upNum=#{upNum}
+    </select>
+<!--     <delete id="delete" >
+        delete from emp2 where empno=#{empno}
+    </delete> -->
+</mapper>
